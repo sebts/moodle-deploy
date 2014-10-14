@@ -2,33 +2,40 @@
 
 class git {
 
-    public $remotes = array();
-    public $workpath = '';
-    public $gitpath = '';
-    public $interactive = true;
+    protected $cfg = null; //gitconfig
 
-    protected $scriptpath = '';
-
-    public function git($workpath = '') {
-        $this->scriptpath = getcwd();
-        $this->workpath = $workpath;
+    public function git(gitconfig $config) {
+        $this->cfg = $config;
+        if (empty($this->cfg->workpath)) {
+            throw new Exception('Workpath must be configured.', __LINE__);
+        }
+        if (empty($this->cfg->scriptpath)) {
+            throw new Exception('Scriptpath must be configured.', __LINE__);
+        }
     }
 
-    public function test() {
-        chdir($this->workpath);
+    protected function cdrepo() {
+        $this->initrepository();
+        chdir($this->cfg->workpath);
+    }
 
-        echo "I am " . prompt::ask("Who are you?");
-        if (prompt::askif("What's it going to be?")) {
-            echo "yes";
-        } else {
-            echo "no";
+    protected function cdout() {
+        chdir($this->cfg->scriptpath);
+    }
+
+    protected function initrepository() {
+        $workpath = $this->cfg->workpath;
+        $gitpath = $this->cfg->gitpath;
+
+        if ($this->cfg->interactive) {
+            if (is_dir($workpath) && !file_exists("$workpath/.git")) {
+                prompt::state("Work path '$workpath' already exists, but is not under git control.");
+                if (!prompt::askif("Are you sure you want to initialize your workpath in this directory?")) {
+                    throw new Exception("Please set the correct workpath in the config.php file.");
+                }
+            }
         }
 
-        chdir($this->scriptpath);
-    }
-
-    static function initrepository($workpath, $gitpath = '') {
-        //add prompts
         $options = '';
         if (!empty($gitpath) && $gitpath != $workpath) {
             $options = "--separate-git-dir=\"$gitpath\"";
